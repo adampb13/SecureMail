@@ -14,6 +14,14 @@ const messageResult = document.getElementById("message-result");
 const sendStatus = document.getElementById("send-status");
 const fileName = document.getElementById("file-name");
 const messageCard = document.getElementById("message-card");
+const inboxList = document.getElementById("inbox-list");
+const inboxRefresh = document.getElementById("inbox-refresh");
+const detailEmpty = document.getElementById("detail-empty");
+const detailView = document.getElementById("detail-view");
+const detailMeta = document.getElementById("detail-meta");
+const detailSubject = document.getElementById("detail-subject");
+const detailBody = document.getElementById("detail-body");
+const detailAttachments = document.getElementById("detail-attachments");
 
 let authToken = null;
 
@@ -128,6 +136,7 @@ loginForm?.addEventListener("submit", async (e) => {
     loginResult.textContent = "Zalogowano. Token zapisany w sesji.";
     setSendState("zalogowany");
     updateMessageVisibility(true);
+    await loadInbox();
   } catch (err) {
     loginResult.textContent = err.message || "Błąd logowania";
     authToken = null;
@@ -190,6 +199,11 @@ messageForm?.addEventListener("submit", async (e) => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Błąd wysyłki");
     messageResult.textContent = `Wysłano. ID: ${data.id}`;
+    attachmentBase64 = null;
+    attachmentFile = null;
+    fileName.textContent = "";
+    messageForm.reset();
+    await loadInbox();
   } catch (err) {
     messageResult.textContent = err.message || "Błąd wysyłki";
   }
@@ -203,5 +217,107 @@ function updateMessageVisibility(isLoggedIn) {
     messageCard.classList.add("hidden");
   }
 }
+
+async function loadInbox() {
+  if (!authToken || !inboxList) return;
+  inboxList.innerHTML = "<li class='muted small'>Ładowanie...</li>";
+  try {
+    const res = await fetch("/api/messages", {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Błąd pobierania wiadomości");
+    renderInbox(data);
+  } catch (err) {
+    inboxList.innerHTML = `<li class='muted small'>${err.message || "Błąd pobierania"}</li>`;
+  }
+}
+
+function renderInbox(items) {
+  if (!inboxList) return;
+  if (!items.length) {
+    inboxList.innerHTML = "<li class='muted small'>Brak wiadomości.</li>";
+    detailEmpty?.classList.remove("hidden");
+    detailView?.classList.add("hidden");
+    return;
+  }
+  inboxList.innerHTML = "";
+  items.forEach((item) => {
+    const li = document.createElement("li");
+    li.className = "inbox__item";
+    li.innerHTML = `
+      <p class="inbox__title">${item.subject}</p>
+      <p class="inbox__meta">Od: ${item.sender_email} • ${new Date(item.created_at).toLocaleString()}</p>
+    `;
+    li.addEventListener("click", () => selectMessage(item.id));
+    inboxList.appendChild(li);
+  });
+}
+
+async function selectMessage(id) {
+  if (!authToken) return;
+  detailEmpty?.classList.add("hidden");
+  detailView?.classList.add("hidden");
+  detailMeta.textContent = "Ładowanie...";
+  try {
+    const res = await fetch(`/api/messages/${id}`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Błąd pobierania wiadomości");
+    detailMeta.textContent = `Od: ${data.sender_email} • ${new Date(data.created_at).toLocaleString()}`;
+    detailSubject.textContent = data.subject;
+    detailBody.textContent = data.body;
+    renderAttachments(data.attachments);
+    detailView?.classList.remove("hidden");
+  } catch (err) {
+    detailMeta.textContent = err.message || "Błąd pobierania";
+    detailView?.classList.add("hidden");
+    detailEmpty?.classList.remove("hidden");
+  }
+}
+
+function renderAttachments(attachments) {
+  if (!detailAttachments) return;
+  detailAttachments.innerHTML = "";
+  if (!attachments || !attachments.length) {
+    detailAttachments.innerHTML = "<p class='muted small'>Brak załączników.</p>";
+    return;
+  }
+  const container = document.createElement("div");
+  container.className = "attachments";
+  attachments.forEach((att) => {
+    const btn = document.createElement("a");
+    btn.href = "#";
+    btn.textContent = `${att.filename} (${Math.round(att.size / 1024) || att.size} kB)`;
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      downloadAttachment(att.id, att.filename, att.content_type);
+    });
+    container.appendChild(btn);
+  });
+  detailAttachments.appendChild(container);
+}
+
+async function downloadAttachment(id, filename, contentType) {
+  if (!authToken) return;
+  try {
+    const res = await fetch(`/api/attachments/${id}`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    if (!res.ok) throw new Error("Błąd pobierania");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename || `attachment-${id}`;
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    messageResult.textContent = err.message || "Błąd pobierania załącznika";
+  }
+}
+
+inboxRefresh?.addEventListener("click", loadInbox);
 
 updateMessageVisibility(false);

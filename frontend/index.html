@@ -84,6 +84,28 @@
               <button class="button primary" type="submit">Wyślij</button>
               <p id="message-result" class="muted small"></p>
             </form>
+
+            <div class="message-panel">
+              <div class="message-panel__list">
+                <div class="card__header">
+                  <h4>Odebrane</h4>
+                  <button id="inbox-refresh" class="button subtle" type="button">Odśwież</button>
+                </div>
+                <ul id="inbox-list" class="inbox"></ul>
+              </div>
+              <div class="message-panel__detail">
+                <div class="card__header">
+                  <h4>Podgląd</h4>
+                </div>
+                <div id="detail-empty" class="muted small">Wybierz wiadomość z listy.</div>
+                <div id="detail-view" class="hidden">
+                  <p class="muted small" id="detail-meta"></p>
+                  <h5 id="detail-subject"></h5>
+                  <p id="detail-body"></p>
+                  <div id="detail-attachments"></div>
+                </div>
+              </div>
+            </div>
           </section>
         </div>
 

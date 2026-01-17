@@ -2,13 +2,14 @@ import time
 import uuid
 
 import pyotp
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from .. import models, schemas, session_store
 from ..config import get_settings
 from ..crypto_utils import decrypt_private_key, encrypt_private_key, generate_rsa_keypair
 from ..database import get_db
+from ..rate_limiter import check_rate_limit
 from ..security import create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -43,7 +44,11 @@ def register(payload: schemas.UserCreate, db: Session = Depends(get_db)) -> sche
 
 
 @router.post("/login", response_model=schemas.TokenResponse)
-def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)) -> schemas.TokenResponse:
+def login(payload: schemas.LoginRequest, request: Request, db: Session = Depends(get_db)) -> schemas.TokenResponse:
+    client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown").split(",")[0].strip()
+    if not check_rate_limit("login", client_ip):
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many attempts, try later")
+
     user = db.query(models.User).filter(models.User.email == payload.email.lower()).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
