@@ -204,6 +204,10 @@ body {
   transform: translateY(-1px);
 }
 
+#logout-btn {
+  margin-top: 10px;
+}
+
 .status-block {
   display: flex;
   align-items: center;

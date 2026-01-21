@@ -12,17 +12,10 @@
         <div class="hero__text">
           <p class="eyebrow">Private &amp; simple</p>
           <h1>SecureMail</h1>
-          <p class="lead">
-            Minimalny panel do sprawdzenia statusu API i uruchomienia szyfrowanej skrzynki.
-          </p>
           <div class="hero__actions">
             <button id="refresh" type="button" class="button primary">Odśwież status</button>
             <span id="status-pill" class="pill muted">Sprawdzam...</span>
           </div>
-        </div>
-        <div class="hero__badge">
-          <div class="dot"></div>
-          <span>End-to-end crypto</span>
         </div>
       </header>
 
@@ -60,6 +53,7 @@
               <button class="button primary" type="submit">Zaloguj</button>
               <p id="login-result" class="muted small"></p>
             </form>
+            <button id="logout-btn" class="button subtle hidden" type="button">Wyloguj</button>
           </section>
 
           <section id="message-card" class="card hidden">
@@ -144,22 +138,7 @@
               <p id="register-result" class="muted small"></p>
               <p id="register-totp" class="muted small"></p>
             </form>
-          </section>
-
-          <section class="card secondary">
-            <div class="card__header">
-              <h4>Status backendu</h4>
-              <span id="status-text" class="pill muted">Sprawdzam...</span>
-            </div>
-            <p class="muted">FastAPI + Postgres za NGINX. Wynik health check poniżej.</p>
-            <div class="status-block" id="status-block">
-              <div class="status-block__icon" aria-hidden="true"></div>
-              <div>
-                <div class="status-block__label">/health</div>
-                <div id="status-detail" class="status-block__value">Oczekiwanie na odpowiedź...</div>
-              </div>
-            </div>
-          </section>
+          </section>
         </div>
       </main>
     </div>

@@ -9,6 +9,7 @@ const registerResult = document.getElementById("register-result");
 const registerTotp = document.getElementById("register-totp");
 const loginForm = document.getElementById("login-form");
 const loginResult = document.getElementById("login-result");
+const logoutBtn = document.getElementById("logout-btn");
 const messageForm = document.getElementById("message-form");
 const messageResult = document.getElementById("message-result");
 const sendStatus = document.getElementById("send-status");
@@ -28,6 +29,7 @@ const detailDelete = document.getElementById("detail-delete");
 
 let authToken = null;
 let currentMessage = null;
+const STORAGE_KEY = "securemail_token";
 
 function setStatus(state, message) {
   const states = {
@@ -93,6 +95,21 @@ loadStatus();
 
 function setSendState(text) {
   if (sendStatus) sendStatus.textContent = text;
+}
+
+function setAuthToken(token) {
+  authToken = token;
+  if (token) {
+    sessionStorage.setItem(STORAGE_KEY, token);
+    setSendState("zalogowany");
+    updateMessageVisibility(true);
+    logoutBtn?.classList.remove("hidden");
+  } else {
+    sessionStorage.removeItem(STORAGE_KEY);
+    setSendState("wymaga zalogowania");
+    updateMessageVisibility(false);
+    logoutBtn?.classList.add("hidden");
+  }
 }
 
 function parseRecipients(value) {
@@ -215,17 +232,13 @@ loginForm?.addEventListener("submit", async (e) => {
       body: JSON.stringify(payload),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Błąd logowania");
-    authToken = data.access_token;
-    loginResult.textContent = "Zalogowano. Token zapisany w sesji.";
-    setSendState("zalogowany");
-    updateMessageVisibility(true);
+    if (!res.ok) throw new Error(data.detail || "Blad logowania");
+    setAuthToken(data.access_token);
+    loginResult.textContent = "Zalogowano. Sesja zapisana.";
     await loadInbox();
   } catch (err) {
-    loginResult.textContent = err.message || "Błąd logowania";
-    authToken = null;
-    setSendState("wymaga zalogowania");
-    updateMessageVisibility(false);
+    loginResult.textContent = err.message || "Blad logowania";
+    setAuthToken(null);
   }
 });
 
@@ -287,7 +300,7 @@ messageForm?.addEventListener("submit", async (e) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Błąd wysyłki");
-    messageResult.textContent = `Wysłano. ID: ${data.id}`;
+    messageResult.textContent = "Wyslano.";
     attachmentBase64 = null;
     attachmentFile = null;
     fileName.textContent = "";
@@ -315,6 +328,10 @@ async function loadInbox() {
     const res = await fetch("/api/messages", {
       headers: { Authorization: `Bearer ${authToken}` },
     });
+    if (res.status === 401) {
+      setAuthToken(null);
+      throw new Error("Sesja wygasla. Zaloguj sie ponownie.");
+    }
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Błąd pobierania wiadomości");
     renderInbox(data);
@@ -425,6 +442,12 @@ async function downloadAttachment(id, filename, contentType) {
   }
 }
 
+logoutBtn?.addEventListener("click", () => {
+  setAuthToken(null);
+  if (loginResult) loginResult.textContent = "Wylogowano.";
+  if (messageResult) messageResult.textContent = "";
+});
+
 detailMarkUnread?.addEventListener("click", async () => {
   if (!authToken || !currentMessage) return;
   try {
@@ -452,5 +475,11 @@ detailDelete?.addEventListener("click", async () => {
 
 inboxRefresh?.addEventListener("click", loadInbox);
 
-updateMessageVisibility(false);
-resetDetailView();
+const storedToken = sessionStorage.getItem(STORAGE_KEY);
+if (storedToken) {
+  setAuthToken(storedToken);
+  if (loginResult) loginResult.textContent = "Sesja przywrocona.";
+  loadInbox();
+} else {
+  setAuthToken(null);
+}
