@@ -47,7 +47,15 @@
               </label>
               <label>
                 Kod TOTP
-                <input type="text" name="totp" required placeholder="6 cyfr" pattern="\\d{6}" />
+                <input
+                  type="text"
+                  name="totp"
+                  required
+                  placeholder="6 cyfr"
+                  pattern="[0-9]{6}"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                />
               </label>
               <button class="button primary" type="submit">Zaloguj</button>
               <p id="login-result" class="muted small"></p>
@@ -62,8 +70,8 @@
             <form id="message-form" class="form inline">
               <div class="form__row">
                 <label>
-                  Odbiorca
-                  <input type="email" name="recipient" placeholder="adres odbiorcy" required />
+                  Odbiorcy (oddziel przecinkiem)
+                  <input type="text" name="recipients" placeholder="adres1@example.com, adres2@example.com" required />
                 </label>
                 <label>
                   Temat
@@ -100,6 +108,11 @@
                 <div id="detail-empty" class="muted small">Wybierz wiadomość z listy.</div>
                 <div id="detail-view" class="hidden">
                   <p class="muted small" id="detail-meta"></p>
+                  <div class="detail-actions">
+                    <span id="detail-verify" class="pill muted">Weryfikacja</span>
+                    <button id="detail-mark-unread" class="button subtle" type="button">Oznacz jako nieodczytana</button>
+                    <button id="detail-delete" class="button danger" type="button">Usun z inboxu</button>
+                  </div>
                   <h5 id="detail-subject"></h5>
                   <p id="detail-body"></p>
                   <div id="detail-attachments"></div>

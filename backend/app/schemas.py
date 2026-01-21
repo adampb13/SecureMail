@@ -72,6 +72,7 @@ class MessageDetail(BaseModel):
     sender_email: EmailStr
     created_at: datetime
     recipients: List[EmailStr]
+    verified: bool
     read_at: datetime | None = None
     deleted_at: datetime | None = None
     attachments: List[AttachmentMeta] = []

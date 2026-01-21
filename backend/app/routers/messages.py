@@ -132,6 +132,7 @@ def send_message(
         sender_email=current_user.email,
         created_at=message.created_at,
         recipients=[user.email for user in recipients],
+        verified=True,
         read_at=None,
         deleted_at=None,
         attachments=attachments_meta,
@@ -183,9 +184,6 @@ def get_message(
         mr.message.signature,
         mr.message.sender.public_key_pem,
     )
-    if not verified:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Signature verification failed")
-
     return schemas.MessageDetail(
         id=mr.message.id,
         subject=subject,
@@ -193,6 +191,7 @@ def get_message(
         sender_email=mr.message.sender.email,
         created_at=mr.message.created_at,
         recipients=recipients,
+        verified=verified,
         read_at=mr.read_at,
         deleted_at=mr.deleted_at,
         attachments=attachments_meta,
@@ -222,6 +221,31 @@ def mark_as_read(
         db.commit()
 
     return schemas.MarkReadResponse(status="read")
+
+
+@router.post("/{message_id}/unread", response_model=schemas.MarkReadResponse)
+def mark_as_unread(
+    message_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.MarkReadResponse:
+    mr = (
+        db.query(models.MessageRecipient)
+        .filter(
+            models.MessageRecipient.recipient_id == current_user.id,
+            models.MessageRecipient.message_id == message_id,
+        )
+        .first()
+    )
+
+    if mr is None or mr.deleted_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
+
+    if mr.read_at is not None:
+        mr.read_at = None
+        db.commit()
+
+    return schemas.MarkReadResponse(status="unread")
 
 
 @router.delete("/{message_id}", status_code=status.HTTP_204_NO_CONTENT)

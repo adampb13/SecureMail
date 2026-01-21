@@ -193,6 +193,13 @@ body {
   border: 1px solid #e1e7f0;
 }
 
+.button.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  box-shadow: none;
+}
+
 .button:hover {
   transform: translateY(-1px);
 }
@@ -322,6 +329,15 @@ textarea {
   transition: border-color 120ms ease, transform 120ms ease;
 }
 
+.inbox__item--unread {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.inbox__item--unread .inbox__title {
+  font-weight: 800;
+}
+
 .inbox__item:hover {
   border-color: #2563eb;
   transform: translateY(-1px);
@@ -343,6 +359,14 @@ textarea {
   margin-right: 8px;
   font-size: 14px;
   color: #2563eb;
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0 10px;
 }
 
 @media (max-width: 900px) {

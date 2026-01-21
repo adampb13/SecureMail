@@ -22,8 +22,12 @@ const detailMeta = document.getElementById("detail-meta");
 const detailSubject = document.getElementById("detail-subject");
 const detailBody = document.getElementById("detail-body");
 const detailAttachments = document.getElementById("detail-attachments");
+const detailVerify = document.getElementById("detail-verify");
+const detailMarkUnread = document.getElementById("detail-mark-unread");
+const detailDelete = document.getElementById("detail-delete");
 
 let authToken = null;
+let currentMessage = null;
 
 function setStatus(state, message) {
   const states = {
@@ -89,6 +93,86 @@ loadStatus();
 
 function setSendState(text) {
   if (sendStatus) sendStatus.textContent = text;
+}
+
+function parseRecipients(value) {
+  if (!value) return [];
+  const parts = value
+    .split(/[,\s;]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return Array.from(new Set(parts));
+}
+
+function updateVerifyIndicator(verified) {
+  if (!detailVerify) return;
+  if (verified === true) {
+    detailVerify.className = "pill good";
+    detailVerify.textContent = "Zweryfikowana";
+  } else if (verified === false) {
+    detailVerify.className = "pill bad";
+    detailVerify.textContent = "Niezweryfikowana";
+  } else {
+    detailVerify.className = "pill muted";
+    detailVerify.textContent = "Weryfikacja";
+  }
+}
+
+function updateDetailActions() {
+  if (detailMarkUnread) {
+    if (currentMessage && currentMessage.read_at) {
+      detailMarkUnread.classList.remove("hidden");
+    } else {
+      detailMarkUnread.classList.add("hidden");
+    }
+  }
+  if (detailDelete) {
+    if (currentMessage) {
+      detailDelete.classList.remove("hidden");
+    } else {
+      detailDelete.classList.add("hidden");
+    }
+  }
+}
+
+function resetDetailView() {
+  currentMessage = null;
+  if (detailMeta) detailMeta.textContent = "";
+  if (detailSubject) detailSubject.textContent = "";
+  if (detailBody) detailBody.textContent = "";
+  if (detailAttachments) detailAttachments.innerHTML = "";
+  updateVerifyIndicator(null);
+  updateDetailActions();
+}
+
+async function markRead(id) {
+  const res = await fetch(`/api/messages/${id}/read`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${authToken}` },
+  });
+  if (!res.ok) {
+    throw new Error("Blad oznaczenia jako odczytana");
+  }
+}
+
+async function markUnread(id) {
+  const res = await fetch(`/api/messages/${id}/unread`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${authToken}` },
+  });
+  if (!res.ok) {
+    throw new Error("Blad oznaczenia jako nieodczytana");
+  }
+}
+
+async function deleteMessage(id) {
+  const res = await fetch(`/api/messages/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${authToken}` },
+  });
+  if (!res.ok) {
+    throw new Error("Blad usuwania wiadomosci");
+  }
 }
 
 registerForm?.addEventListener("submit", async (e) => {
@@ -173,6 +257,11 @@ messageForm?.addEventListener("submit", async (e) => {
   }
   messageResult.textContent = "Wysyłam...";
   const formData = new FormData(messageForm);
+  const recipients = parseRecipients(formData.get("recipients"));
+  if (!recipients.length) {
+    messageResult.textContent = "Podaj co najmniej jednego odbiorce.";
+    return;
+  }
   const attachments = [];
   if (attachmentBase64 && attachmentFile) {
     attachments.push({
@@ -182,7 +271,7 @@ messageForm?.addEventListener("submit", async (e) => {
     });
   }
   const payload = {
-    recipients: [formData.get("recipient")],
+    recipients,
     subject: formData.get("subject"),
     body: formData.get("body"),
     attachments,
@@ -215,6 +304,7 @@ function updateMessageVisibility(isLoggedIn) {
     messageCard.classList.remove("hidden");
   } else {
     messageCard.classList.add("hidden");
+    resetDetailView();
   }
 }
 
@@ -244,7 +334,8 @@ function renderInbox(items) {
   inboxList.innerHTML = "";
   items.forEach((item) => {
     const li = document.createElement("li");
-    li.className = "inbox__item";
+    const isUnread = !item.read_at;
+    li.className = `inbox__item${isUnread ? " inbox__item--unread" : ""}`;
     li.innerHTML = `
       <p class="inbox__title">${item.subject}</p>
       <p class="inbox__meta">Od: ${item.sender_email} • ${new Date(item.created_at).toLocaleString()}</p>
@@ -258,20 +349,36 @@ async function selectMessage(id) {
   if (!authToken) return;
   detailEmpty?.classList.add("hidden");
   detailView?.classList.add("hidden");
-  detailMeta.textContent = "Ładowanie...";
+  if (detailMeta) detailMeta.textContent = "Ladowanie...";
   try {
     const res = await fetch(`/api/messages/${id}`, {
       headers: { Authorization: `Bearer ${authToken}` },
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Błąd pobierania wiadomości");
-    detailMeta.textContent = `Od: ${data.sender_email} • ${new Date(data.created_at).toLocaleString()}`;
+    if (!res.ok) throw new Error(data.detail || "Blad pobierania wiadomosci");
+    currentMessage = data;
+    detailMeta.textContent = `Od: ${data.sender_email} - ${new Date(data.created_at).toLocaleString()}`;
     detailSubject.textContent = data.subject;
     detailBody.textContent = data.body;
     renderAttachments(data.attachments);
+    updateVerifyIndicator(data.verified);
+    updateDetailActions();
     detailView?.classList.remove("hidden");
+    if (!data.read_at) {
+      try {
+        await markRead(id);
+        currentMessage.read_at = new Date().toISOString();
+        updateDetailActions();
+        await loadInbox();
+      } catch (err) {
+        detailMeta.textContent = err.message || "Blad oznaczenia jako odczytana";
+      }
+    }
   } catch (err) {
-    detailMeta.textContent = err.message || "Błąd pobierania";
+    if (detailMeta) detailMeta.textContent = err.message || "Blad pobierania";
+    currentMessage = null;
+    updateVerifyIndicator(null);
+    updateDetailActions();
     detailView?.classList.add("hidden");
     detailEmpty?.classList.remove("hidden");
   }
@@ -318,6 +425,32 @@ async function downloadAttachment(id, filename, contentType) {
   }
 }
 
+detailMarkUnread?.addEventListener("click", async () => {
+  if (!authToken || !currentMessage) return;
+  try {
+    await markUnread(currentMessage.id);
+    currentMessage.read_at = null;
+    updateDetailActions();
+    await loadInbox();
+  } catch (err) {
+    if (detailMeta) detailMeta.textContent = err.message || "Blad oznaczenia jako nieodczytana";
+  }
+});
+
+detailDelete?.addEventListener("click", async () => {
+  if (!authToken || !currentMessage) return;
+  try {
+    await deleteMessage(currentMessage.id);
+    resetDetailView();
+    detailView?.classList.add("hidden");
+    detailEmpty?.classList.remove("hidden");
+    await loadInbox();
+  } catch (err) {
+    if (detailMeta) detailMeta.textContent = err.message || "Blad usuwania wiadomosci";
+  }
+});
+
 inboxRefresh?.addEventListener("click", loadInbox);
 
 updateMessageVisibility(false);
+resetDetailView();
