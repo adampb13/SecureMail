@@ -19,8 +19,6 @@ services:
       SECUREMAIL_DATABASE_URL: postgresql+psycopg2://securemail:securemail@db:5432/securemail
     depends_on:
       - db
-    ports:
-      - "8000:8000"
 
   frontend:
     build:

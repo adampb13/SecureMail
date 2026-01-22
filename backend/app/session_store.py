@@ -2,7 +2,7 @@ import threading
 import time
 from typing import Optional, Any
 
-# Simple in-memory store for decrypted private keys tied to token jti.
+# Prosty magazyn w pamięci na odszyfrowane klucze prywatne powiązane z jti tokenu.
 _store: dict[str, tuple[Any, float]] = {}
 _lock = threading.Lock()
 

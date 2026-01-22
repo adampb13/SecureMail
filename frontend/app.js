@@ -26,10 +26,26 @@ const detailAttachments = document.getElementById("detail-attachments");
 const detailVerify = document.getElementById("detail-verify");
 const detailMarkUnread = document.getElementById("detail-mark-unread");
 const detailDelete = document.getElementById("detail-delete");
+const mailboxTabs = document.querySelectorAll("[data-mailbox-tab]");
 
 let authToken = null;
 let currentMessage = null;
 const STORAGE_KEY = "securemail_token";
+const FORCED_DOMAIN = "@smail.com";
+
+function parseDetail(detail) {
+  if (!detail) return "";
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => item.msg || item.detail || item.error || JSON.stringify(item))
+      .join("; ");
+  }
+  if (typeof detail === "object") {
+    return detail.msg || detail.detail || detail.error || JSON.stringify(detail);
+  }
+  return "";
+}
 
 function setStatus(state, message) {
   const states = {
@@ -208,7 +224,10 @@ registerForm?.addEventListener("submit", async (e) => {
       body: JSON.stringify(payload),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Błąd rejestracji");
+    if (!res.ok) {
+      const msg = parseDetail(data.detail) || "Błąd rejestracji";
+      throw new Error(msg);
+    }
     registerResult.textContent = "Użytkownik utworzony.";
     registerTotp.textContent = `TOTP URI: ${data.totp_uri}`;
   } catch (err) {
@@ -232,7 +251,10 @@ loginForm?.addEventListener("submit", async (e) => {
       body: JSON.stringify(payload),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Blad logowania");
+    if (!res.ok) {
+      const msg = parseDetail(data.detail) || "Blad logowania";
+      throw new Error(msg);
+    }
     setAuthToken(data.access_token);
     loginResult.textContent = "Zalogowano. Sesja zapisana.";
     await loadInbox();

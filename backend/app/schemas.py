@@ -1,12 +1,26 @@
 from datetime import datetime
+import re
 from typing import List
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, value: str) -> str:
+        if not re.search(r"[A-Z]", value):
+            raise ValueError("Hasło musi zawierać co najmniej jedną wielką literę")
+        if not re.search(r"[a-z]", value):
+            raise ValueError("Hasło musi zawierać co najmniej jedną małą literę")
+        if not re.search(r"[0-9]", value):
+            raise ValueError("Hasło musi zawierać co najmniej jedną cyfrę")
+        if not re.search(r"[^A-Za-z0-9]", value):
+            raise ValueError("Hasło musi zawierać co najmniej jeden znak specjalny")
+        return value
 
 
 class UserOut(BaseModel):

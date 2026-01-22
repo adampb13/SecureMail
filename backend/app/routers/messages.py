@@ -66,7 +66,7 @@ def send_message(
     if missing:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Recipients not found: {', '.join(missing)}",
+            detail=f"Odbiorcy nie znalezieni: {', '.join(missing)}",
         )
 
     aes_key = generate_aes_key()
@@ -80,7 +80,7 @@ def send_message(
         try:
             raw = base64.b64decode(att.data_base64, validate=True)
         except Exception:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid base64 for {att.filename}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Nieprawidłowy base64 dla {att.filename}")
         data_enc, data_nonce = encrypt_payload(raw, aes_key)
         attachment_ciphertexts.append(data_enc)
         attachments_sizes.append(len(raw))
@@ -157,7 +157,7 @@ def get_message(
     )
 
     if mr is None or mr.deleted_at is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wiadomość nie znaleziona")
 
     recipients = [link.recipient.email for link in mr.message.recipients]
 
@@ -214,7 +214,7 @@ def mark_as_read(
     )
 
     if mr is None or mr.deleted_at is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wiadomość nie znaleziona")
 
     if mr.read_at is None:
         mr.read_at = datetime.utcnow()
@@ -239,7 +239,7 @@ def mark_as_unread(
     )
 
     if mr is None or mr.deleted_at is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wiadomość nie znaleziona")
 
     if mr.read_at is not None:
         mr.read_at = None
@@ -264,7 +264,7 @@ def delete_message(
     )
 
     if mr is None or mr.deleted_at is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wiadomość nie znaleziona")
 
     mr.deleted_at = datetime.utcnow()
     db.commit()

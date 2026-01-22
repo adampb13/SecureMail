@@ -20,7 +20,7 @@ settings = get_settings()
 def register(payload: schemas.UserCreate, db: Session = Depends(get_db)) -> schemas.RegisterResponse:
     existing = db.query(models.User).filter(models.User.email == payload.email.lower()).first()
     if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already exists")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Użytkownik już istnieje")
 
     private_pem, public_pem = generate_rsa_keypair()
     private_enc, salt, nonce = encrypt_private_key(private_pem, payload.password)
@@ -47,15 +47,15 @@ def register(payload: schemas.UserCreate, db: Session = Depends(get_db)) -> sche
 def login(payload: schemas.LoginRequest, request: Request, db: Session = Depends(get_db)) -> schemas.TokenResponse:
     client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown").split(",")[0].strip()
     if not check_rate_limit("login", client_ip):
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many attempts, try later")
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Zbyt wiele prób, spróbuj później")
 
     user = db.query(models.User).filter(models.User.email == payload.email.lower()).first()
     if not user or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Nieprawidłowe dane logowania")
 
     totp = pyotp.TOTP(user.totp_secret)
     if not totp.verify(payload.totp_code, valid_window=1):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Nieprawidłowe dane logowania")
 
     private_key = decrypt_private_key(
         ciphertext=user.private_key_enc,

@@ -4,7 +4,7 @@ from collections import deque
 from typing import Deque, Dict
 
 RateLimitConfig = {
-    "login": {"limit": 5, "window": 60},  # 5 attempts per 60 seconds per IP
+    "login": {"limit": 5, "window": 60},  # 5 prób na 60 sekund na IP
 }
 
 _lock = threading.Lock()

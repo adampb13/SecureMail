@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
+from urllib.parse import quote
 
 from .. import models
 from ..crypto_utils import decrypt_payload, unwrap_aes_key
@@ -7,6 +8,12 @@ from ..database import get_db
 from ..dependencies import get_current_private_key, get_current_user
 
 router = APIRouter(prefix="/attachments", tags=["attachments"])
+
+
+def build_disposition(filename: str) -> str:
+    ascii_name = filename.encode("ascii", "ignore").decode() or "plik"
+    encoded = quote(filename)
+    return f'attachment; filename="{ascii_name}"; filename*=UTF-8\'\'{encoded}'
 
 
 @router.get("/{attachment_id}")
@@ -29,7 +36,7 @@ def download_attachment(
     )
 
     if attachment is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Załącznik nie znaleziony")
 
     mr = (
         db.query(models.MessageRecipient)
@@ -41,12 +48,12 @@ def download_attachment(
         .first()
     )
     if mr is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Załącznik nie znaleziony")
 
     aes_key = unwrap_aes_key(mr.aes_key_enc, private_key)
     data = decrypt_payload(attachment.data, attachment.nonce, aes_key)
 
     headers = {
-        "Content-Disposition": f'attachment; filename="{attachment.filename}"',
+        "Content-Disposition": build_disposition(attachment.filename),
     }
     return Response(content=data, media_type=attachment.content_type, headers=headers)
