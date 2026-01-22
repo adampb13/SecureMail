@@ -1,6 +1,6 @@
 # SecureMail
 
-Lekka skrzynka pocztowa z 2FA (TOTP) i szyfrowaniem end-to-end dla treści/załączników.
+Lekka skrzynka pocztowa z 2FA (TOTP) i szyfrowaniem dla treści/załączników.
 
 ## Stos
 - Backend: FastAPI + SQLAlchemy, Argon2 dla haseł, JWT na sesje, TOTP (pyotp)
