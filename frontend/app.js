@@ -31,7 +31,11 @@ const mailboxTabs = document.querySelectorAll("[data-mailbox-tab]");
 let authToken = null;
 let currentMessage = null;
 const STORAGE_KEY = "securemail_token";
-const FORCED_DOMAIN = "@smail.com";
+const STATUS_DOT_CLASSES = [
+  "status-block__icon--checking",
+  "status-block__icon--up",
+  "status-block__icon--down",
+];
 
 function parseDetail(detail) {
   if (!detail) return "";
@@ -53,19 +57,19 @@ function setStatus(state, message) {
       pillClass: "pill muted",
       pillText: "Sprawdzam...",
       detail: message ?? "Oczekiwanie na odpowiedź...",
-      blockColor: "#e5e7eb",
+      dotClass: "status-block__icon--checking",
     },
     up: {
       pillClass: "pill good",
       pillText: "Backend działa",
       detail: message ?? "OK",
-      blockColor: "#16a34a",
+      dotClass: "status-block__icon--up",
     },
     down: {
       pillClass: "pill bad",
       pillText: "Niedostępny",
       detail: message ?? "Brak połączenia",
-      blockColor: "#dc2626",
+      dotClass: "status-block__icon--down",
     },
   };
   const cfg = states[state];
@@ -83,8 +87,8 @@ function setStatus(state, message) {
     statusDetail.textContent = cfg.detail;
   }
   if (statusDot) {
-    statusDot.style.background = cfg.blockColor;
-    statusDot.style.boxShadow = `0 0 0 6px ${cfg.blockColor}20`;
+    statusDot.classList.remove(...STATUS_DOT_CLASSES);
+    statusDot.classList.add(cfg.dotClass);
   }
 }
 
@@ -176,6 +180,24 @@ function resetDetailView() {
   if (detailAttachments) detailAttachments.innerHTML = "";
   updateVerifyIndicator(null);
   updateDetailActions();
+}
+
+function setInboxStatus(message) {
+  if (!inboxList) return;
+  inboxList.textContent = "";
+  const li = document.createElement("li");
+  li.className = "muted small";
+  li.textContent = message;
+  inboxList.appendChild(li);
+}
+
+function setAttachmentsEmpty() {
+  if (!detailAttachments) return;
+  detailAttachments.textContent = "";
+  const note = document.createElement("p");
+  note.className = "muted small";
+  note.textContent = "Brak załączników.";
+  detailAttachments.appendChild(note);
 }
 
 async function markRead(id) {
@@ -345,7 +367,7 @@ function updateMessageVisibility(isLoggedIn) {
 
 async function loadInbox() {
   if (!authToken || !inboxList) return;
-  inboxList.innerHTML = "<li class='muted small'>Ładowanie...</li>";
+  setInboxStatus("Ładowanie...");
   try {
     const res = await fetch("/api/messages", {
       headers: { Authorization: `Bearer ${authToken}` },
@@ -358,19 +380,19 @@ async function loadInbox() {
     if (!res.ok) throw new Error(data.detail || "Błąd pobierania wiadomości");
     renderInbox(data);
   } catch (err) {
-    inboxList.innerHTML = `<li class='muted small'>${err.message || "Błąd pobierania"}</li>`;
+    setInboxStatus(err.message || "Błąd pobierania");
   }
 }
 
 function renderInbox(items) {
   if (!inboxList) return;
   if (!items.length) {
-    inboxList.innerHTML = "<li class='muted small'>Brak wiadomości.</li>";
+    setInboxStatus("Brak wiadomości.");
     detailEmpty?.classList.remove("hidden");
     detailView?.classList.add("hidden");
     return;
   }
-  inboxList.innerHTML = "";
+  inboxList.textContent = "";
   items.forEach((item) => {
     const li = document.createElement("li");
     const isUnread = !item.read_at;
@@ -432,7 +454,7 @@ function renderAttachments(attachments) {
   if (!detailAttachments) return;
   detailAttachments.innerHTML = "";
   if (!attachments || !attachments.length) {
-    detailAttachments.innerHTML = "<p class='muted small'>Brak załączników.</p>";
+    setAttachmentsEmpty();
     return;
   }
   const container = document.createElement("div");

@@ -227,6 +227,21 @@ body {
   box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.08);
 }
 
+.status-block__icon--checking {
+  background: #e5e7eb;
+  box-shadow: 0 0 0 6px rgba(229, 231, 235, 0.25);
+}
+
+.status-block__icon--up {
+  background: #16a34a;
+  box-shadow: 0 0 0 6px rgba(22, 163, 74, 0.18);
+}
+
+.status-block__icon--down {
+  background: #dc2626;
+  box-shadow: 0 0 0 6px rgba(220, 38, 38, 0.18);
+}
+
 .status-block__label {
   font-size: 13px;
   color: #6b7280;
