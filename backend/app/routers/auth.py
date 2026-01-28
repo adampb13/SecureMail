@@ -47,7 +47,8 @@ def register(payload: schemas.UserCreate, db: Session = Depends(get_db)) -> sche
 def login(payload: schemas.LoginRequest, request: Request, db: Session = Depends(get_db)) -> schemas.TokenResponse:
     client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown").split(",")[0].strip()
     if not check_rate_limit("login", client_ip):
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Zbyt wiele prób, spróbuj później")
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, 
+                            detail="Zbyt wiele prób, spróbuj później")
 
     user = db.query(models.User).filter(models.User.email == payload.email.lower()).first()
     if not user or not verify_password(payload.password, user.password_hash):

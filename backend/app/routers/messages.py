@@ -80,7 +80,8 @@ def send_message(
         try:
             raw = base64.b64decode(att.data_base64, validate=True)
         except Exception:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Nieprawidłowy base64 dla {att.filename}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
+                                detail=f"Nieprawidłowy base64 dla {att.filename}")
         data_enc, data_nonce = encrypt_payload(raw, aes_key)
         attachment_ciphertexts.append(data_enc)
         attachments_sizes.append(len(raw))

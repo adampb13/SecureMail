@@ -375,10 +375,15 @@ function renderInbox(items) {
     const li = document.createElement("li");
     const isUnread = !item.read_at;
     li.className = `inbox__item${isUnread ? " inbox__item--unread" : ""}`;
-    li.innerHTML = `
-      <p class="inbox__title">${item.subject}</p>
-      <p class="inbox__meta">Od: ${item.sender_email} • ${new Date(item.created_at).toLocaleString()}</p>
-    `;
+    const title = document.createElement("p");
+    title.className = "inbox__title";
+    title.textContent = item.subject || "";
+    const meta = document.createElement("p");
+    meta.className = "inbox__meta";
+    const sender = item.sender_email || "";
+    const createdAt = item.created_at ? new Date(item.created_at).toLocaleString() : "";
+    meta.textContent = `Od: ${sender} - ${createdAt}`;
+    li.append(title, meta);
     li.addEventListener("click", () => selectMessage(item.id));
     inboxList.appendChild(li);
   });
